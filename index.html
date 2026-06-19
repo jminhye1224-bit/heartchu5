@@ -911,11 +911,9 @@ function bindAssist() {
 function isUsed(key) { try { return localStorage.getItem(key) === "1"; } catch (e) { return false; } }
 function markUsed(key) { try { localStorage.setItem(key, "1"); } catch (e) {} }
 function syncAssistLimits() {
+  // AI 초안 생성만 1회 제한 (맞춤법 검사는 무제한)
   if (isUsed(AI_USED_KEY)) {
     const b = $("#btn-ai"); b.disabled = true; b.textContent = "AI 도움 사용 완료";
-  }
-  if (isUsed(SPELL_USED_KEY)) {
-    const b = $("#btn-spell"); b.disabled = true; b.textContent = "맞춤법 검사 완료";
   }
 }
 
@@ -1023,10 +1021,6 @@ async function requestSpellcheck() {
   status.hidden = false;
   $("#btn-spell-apply").hidden = true;
 
-  if (isUsed(SPELL_USED_KEY)) {
-    status.textContent = "맞춤법 검사는 한 번만 이용하실 수 있어요. 작성한 편지를 한 번 더 읽어봐 주세요. 🙂";
-    return;
-  }
   if (!text) {
     status.textContent = "먼저 편지 내용을 작성해주세요.";
     return;
@@ -1049,8 +1043,7 @@ async function requestSpellcheck() {
       _spellResult = data.corrected;
       status.textContent = "추천 수정본:\n\n" + data.corrected;
       $("#btn-spell-apply").hidden = false;
-      markUsed(SPELL_USED_KEY);
-      btn.textContent = "맞춤법 검사 완료";   // 사용 완료 → 계속 비활성
+      btn.disabled = false;   // 맞춤법은 무제한 → 다시 검사 가능
     } else {
       prog.stop();
       status.textContent = (data && data.message) ? data.message : QUOTA_MSG;
