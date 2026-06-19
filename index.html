@@ -476,12 +476,6 @@ body {
               </div>
             </div>
           </div>
-
-          <dl class="preview-info">
-            <div><dt>글씨체</dt><dd id="pc-info-font"></dd></div>
-            <div><dt>글씨 크기</dt><dd id="pc-info-size"></dd></div>
-            <div><dt>선택 디자인</dt><dd id="pc-info-design"></dd></div>
-          </dl>
         </div>
       </div>
 
@@ -528,20 +522,33 @@ body {
 
 /* ----------------------------------------------------------
    설정 (CONFIG)
-   - APPS_SCRIPT_URL : Google Apps Script 웹앱 배포 URL 을 넣어주세요.
-     (Code.gs 참고. 비어 있으면 제출 시 데모 모드로 동작)
-   - AI_ENDPOINT / SPELLCHECK_ENDPOINT : 추후 Claude/OpenAI API
-     연동 시 사용할 엔드포인트. 비어 있으면 "준비 중" 안내만 표시.
+   - APPS_SCRIPT_URL : Google Apps Script 웹앱 배포 URL(/exec) 하나만 넣으면
+     편지 제출 + AI 편지 도움 + 맞춤법 검사가 모두 이 주소로 동작합니다.
+     (Gemini API 키는 프론트가 아니라 Apps Script의 스크립트 속성에 보관)
+     비어 있으면 제출은 데모 모드, AI/맞춤법은 "준비 중" 안내만 표시.
    ---------------------------------------------------------- */
 const CONFIG = {
   APPS_SCRIPT_URL: "",       // 예) https://script.google.com/macros/s/XXXX/exec
-  AI_ENDPOINT: "",           // 예) https://script.google.com/macros/s/XXXX/exec?action=ai
-  SPELLCHECK_ENDPOINT: "",   // 예) https://script.google.com/macros/s/XXXX/exec?action=spell
 };
 
 const MIN_CONTENT = 50;
 const MAX_CONTENT = 500;
 const STORAGE_KEY = "hatchu-letter-draft-v1";
+const CLIENT_ID_KEY = "hatchu-client-id";
+const AI_USED_KEY = "hatchu-ai-used";
+const SPELL_USED_KEY = "hatchu-spell-used";
+const QUOTA_MSG = "AI 도움 사용량이 많아 잠시 후 다시 이용해주세요.";
+
+/* 고객(브라우저) 식별용 ID — 1인 1회 제한에 사용 */
+function getClientId() {
+  let id = "";
+  try { id = localStorage.getItem(CLIENT_ID_KEY) || ""; } catch (e) {}
+  if (!id) {
+    id = "c-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+    try { localStorage.setItem(CLIENT_ID_KEY, id); } catch (e) {}
+  }
+  return id;
+}
 
 /* 손글씨 폰트 라벨/CSS 매핑 */
 const FONT_MAP = {
@@ -832,11 +839,6 @@ function renderPreview() {
 
   // 자동 정렬: 짧은 편지(대략 3줄 이하 추정)는 가로·세로 중앙 정렬
   inner.classList.toggle("is-centered", isShortLetter(state.content, size.px));
-
-  // 정보 영역
-  $("#pc-info-font").textContent = font.label;
-  $("#pc-info-size").textContent = size.label;
-  $("#pc-info-design").textContent = state.design || "-";
 }
 
 // 줄 수/글자 수 기반으로 짧은 편지 여부 추정
@@ -892,83 +894,118 @@ function bindAssist() {
   $("#btn-ai").addEventListener("click", requestAiDraft);
   $("#btn-spell").addEventListener("click", requestSpellcheck);
   $("#btn-spell-apply").addEventListener("click", applySpellResult);
+
+  // 이미 사용한 고객은 버튼 비활성화 (1인 1회 제한)
+  syncAssistLimits();
 }
 
-/* AI 편지 초안 생성
-   TODO: CONFIG.AI_ENDPOINT 연동 시 아래 fetch 활성화.
-   응답 형식 예: { draft: "..." } */
+// 사용 여부 저장/조회 (1인 1회 제한)
+function isUsed(key) { try { return localStorage.getItem(key) === "1"; } catch (e) { return false; } }
+function markUsed(key) { try { localStorage.setItem(key, "1"); } catch (e) {} }
+function syncAssistLimits() {
+  if (isUsed(AI_USED_KEY)) {
+    const b = $("#btn-ai"); b.disabled = true; b.textContent = "AI 도움 사용 완료";
+  }
+  if (isUsed(SPELL_USED_KEY)) {
+    const b = $("#btn-spell"); b.disabled = true; b.textContent = "맞춤법 검사 완료";
+  }
+}
+
+/* Apps Script(Gemini) 호출 공통 함수.
+   응답: 성공 시 {draft} 또는 {corrected}, 실패 시 {error:true, message} */
+async function callAssist(action, payload) {
+  const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(Object.assign({ action: action, clientId: getClientId() }, payload)),
+  });
+  return res.json();
+}
+
+/* AI 편지 초안 생성 (Gemini, 고객 1회 제한) */
 async function requestAiDraft() {
   const situation = $("#ai-input").value.trim();
   const status = $("#ai-status");
   status.hidden = false;
 
+  if (isUsed(AI_USED_KEY)) {
+    status.textContent = "AI 편지 도움은 한 번만 이용하실 수 있어요. 직접 편지를 이어가 보세요. 🙂";
+    return;
+  }
   if (!situation) {
     status.textContent = "전하고 싶은 상황이나 마음을 먼저 적어주세요.";
     return;
   }
-  if (!CONFIG.AI_ENDPOINT) {
+  if (!CONFIG.APPS_SCRIPT_URL) {
     status.textContent =
       "AI 편지 도움 기능은 곧 제공될 예정이에요.\n" +
       "지금은 적어주신 내용을 참고해 직접 편지를 이어가 보세요. 🙂";
     return;
   }
+
+  const btn = $("#btn-ai");
+  btn.disabled = true;
   try {
     status.textContent = "AI가 편지 초안을 작성하고 있어요…";
-    const res = await fetch(CONFIG.AI_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ situation, recipient: state.recipient }),
-    });
-    const data = await res.json();
+    const data = await callAssist("ai", { situation: situation, recipient: state.recipient });
     if (data && data.draft) {
       $("#f-content").value = data.draft;
       $("#f-content").dispatchEvent(new Event("input", { bubbles: true }));
       status.textContent = "초안을 편지 내용에 넣어드렸어요. 자유롭게 다듬어 주세요. ✨";
+      markUsed(AI_USED_KEY);
+      btn.textContent = "AI 도움 사용 완료";   // 사용 완료 → 계속 비활성
     } else {
-      status.textContent = "초안을 받지 못했어요. 잠시 후 다시 시도해 주세요.";
+      // 사용량 초과 / 한도 / 오류 → 안내 문구
+      status.textContent = (data && data.message) ? data.message : QUOTA_MSG;
+      btn.disabled = false;
     }
   } catch (err) {
-    status.textContent = "AI 연결에 문제가 있어요. 잠시 후 다시 시도해 주세요.";
+    status.textContent = QUOTA_MSG;
+    btn.disabled = false;
   }
 }
 
 let _spellResult = null;
-/* 맞춤법 검사
-   TODO: CONFIG.SPELLCHECK_ENDPOINT 연동 시 활성화.
-   응답 형식 예: { corrected: "..." } */
+/* 맞춤법 검사 (Gemini, 고객 1회 제한) */
 async function requestSpellcheck() {
   const text = $("#f-content").value.trim();
   const status = $("#spell-status");
   status.hidden = false;
   $("#btn-spell-apply").hidden = true;
 
+  if (isUsed(SPELL_USED_KEY)) {
+    status.textContent = "맞춤법 검사는 한 번만 이용하실 수 있어요. 작성한 편지를 한 번 더 읽어봐 주세요. 🙂";
+    return;
+  }
   if (!text) {
     status.textContent = "먼저 편지 내용을 작성해주세요.";
     return;
   }
-  if (!CONFIG.SPELLCHECK_ENDPOINT) {
+  if (!CONFIG.APPS_SCRIPT_URL) {
     status.textContent =
       "맞춤법·띄어쓰기 검사 기능은 곧 제공될 예정이에요.\n" +
       "작성한 편지를 한 번 더 천천히 읽어봐 주세요. 🙂";
     return;
   }
+
+  const btn = $("#btn-spell");
+  btn.disabled = true;
   try {
     status.textContent = "맞춤법을 확인하고 있어요…";
-    const res = await fetch(CONFIG.SPELLCHECK_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ text }),
-    });
-    const data = await res.json();
+    const data = await callAssist("spell", { text: text });
     if (data && data.corrected) {
       _spellResult = data.corrected;
       status.textContent = "추천 수정본:\n\n" + data.corrected;
       $("#btn-spell-apply").hidden = false;
+      markUsed(SPELL_USED_KEY);
+      btn.textContent = "맞춤법 검사 완료";   // 사용 완료 → 계속 비활성
     } else {
-      status.textContent = "수정할 내용을 찾지 못했어요.";
+      status.textContent = (data && data.message) ? data.message : QUOTA_MSG;
+      btn.disabled = false;
     }
   } catch (err) {
-    status.textContent = "맞춤법 검사 연결에 문제가 있어요. 잠시 후 다시 시도해 주세요.";
+    status.textContent = QUOTA_MSG;
+    btn.disabled = false;
   }
 }
 
