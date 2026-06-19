@@ -152,6 +152,14 @@ body {
   gap: 10px; margin: -8px 0 22px; }
 .assist--inline .assist__status { border-style: solid; border-color: var(--line); }
 
+/* AI 진행 프로그레스바 */
+.ai-progress { display: flex; flex-direction: column; gap: 8px; }
+.ai-progress__bar { height: 9px; background: var(--orange-soft); border-radius: 999px; overflow: hidden; }
+.ai-progress__fill { display: block; height: 100%; width: 0%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--orange), var(--orange-dark)); transition: width .18s ease; }
+.ai-progress__label { font-size: 12.5px; color: var(--ink-soft); text-align: center; }
+.ai-progress__label b { color: var(--orange-dark); }
+
 /* ---------- STEP3 디자인 선택 ---------- */
 .designs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .design { padding: 0; border: 2px solid var(--line); background: var(--white); border-radius: var(--radius);
@@ -922,6 +930,44 @@ async function callAssist(action, payload) {
   return res.json();
 }
 
+/* 진행 프로그레스바
+   - 실제 완료 시점을 알 수 없어 예상 시간 기반으로 ~90%까지 서서히 차오르고,
+     응답이 오면 finish()로 100%를 채운 뒤 멈춘다. (기다리는 재미 + 진행 유추) */
+function startProgress(statusEl, messages) {
+  statusEl.hidden = false;
+  statusEl.innerHTML =
+    '<div class="ai-progress">' +
+    '<div class="ai-progress__bar"><span class="ai-progress__fill"></span></div>' +
+    '<div class="ai-progress__label"><span class="ai-progress__msg"></span> <b>0%</b></div>' +
+    "</div>";
+  const fill = statusEl.querySelector(".ai-progress__fill");
+  const pctEl = statusEl.querySelector(".ai-progress__label b");
+  const msgEl = statusEl.querySelector(".ai-progress__msg");
+  let p = 0;
+  const pickMsg = (v) => {
+    const i = v < 30 ? 0 : v < 60 ? 1 : v < 90 ? 2 : 3;
+    msgEl.textContent = messages[Math.min(i, messages.length - 1)];
+  };
+  pickMsg(0);
+  const timer = setInterval(() => {
+    p += (92 - p) * 0.08; // 처음엔 빠르게, 갈수록 천천히 (약 7초에 90% 근접)
+    if (p > 90) p = 90;
+    fill.style.width = p + "%";
+    pctEl.textContent = Math.round(p) + "%";
+    pickMsg(p);
+  }, 150);
+  return {
+    async finish(doneMsg) {
+      clearInterval(timer);
+      fill.style.width = "100%";
+      pctEl.textContent = "100%";
+      msgEl.textContent = doneMsg || "거의 다 됐어요!";
+      await new Promise((r) => setTimeout(r, 450));
+    },
+    stop() { clearInterval(timer); },
+  };
+}
+
 /* AI 편지 초안 생성 (Gemini, 고객 1회 제한) */
 async function requestAiDraft() {
   const situation = $("#ai-input").value.trim();
@@ -945,10 +991,12 @@ async function requestAiDraft() {
 
   const btn = $("#btn-ai");
   btn.disabled = true;
+  let prog;
   try {
-    status.textContent = "AI가 편지 초안을 작성하고 있어요…";
+    prog = startProgress(status, ["마음을 살펴보는 중…", "어울리는 단어를 고르는 중…", "진심을 담는 중…", "거의 다 됐어요!"]);
     const data = await callAssist("ai", { situation: situation, recipient: state.recipient });
     if (data && data.draft) {
+      await prog.finish("초안이 완성됐어요!");
       $("#f-content").value = data.draft;
       $("#f-content").dispatchEvent(new Event("input", { bubbles: true }));
       status.textContent = "초안을 편지 내용에 넣어드렸어요. 자유롭게 다듬어 주세요. ✨";
@@ -956,10 +1004,12 @@ async function requestAiDraft() {
       btn.textContent = "AI 도움 사용 완료";   // 사용 완료 → 계속 비활성
     } else {
       // 사용량 초과 / 한도 / 오류 → 안내 문구
+      prog.stop();
       status.textContent = (data && data.message) ? data.message : QUOTA_MSG;
       btn.disabled = false;
     }
   } catch (err) {
+    if (prog) prog.stop();
     status.textContent = QUOTA_MSG;
     btn.disabled = false;
   }
@@ -990,20 +1040,24 @@ async function requestSpellcheck() {
 
   const btn = $("#btn-spell");
   btn.disabled = true;
+  let prog;
   try {
-    status.textContent = "맞춤법을 확인하고 있어요…";
+    prog = startProgress(status, ["문장을 살펴보는 중…", "맞춤법을 확인하는 중…", "더 자연스럽게 다듬는 중…", "거의 다 됐어요!"]);
     const data = await callAssist("spell", { text: text });
     if (data && data.corrected) {
+      await prog.finish("검토가 끝났어요!");
       _spellResult = data.corrected;
       status.textContent = "추천 수정본:\n\n" + data.corrected;
       $("#btn-spell-apply").hidden = false;
       markUsed(SPELL_USED_KEY);
       btn.textContent = "맞춤법 검사 완료";   // 사용 완료 → 계속 비활성
     } else {
+      prog.stop();
       status.textContent = (data && data.message) ? data.message : QUOTA_MSG;
       btn.disabled = false;
     }
   } catch (err) {
+    if (prog) prog.stop();
     status.textContent = QUOTA_MSG;
     btn.disabled = false;
   }
