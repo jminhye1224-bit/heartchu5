@@ -1170,8 +1170,10 @@ function downloadPdf(base64, fileName) {
 }
 
 function makeFileName() {
-  const r = (state.recipient || "letter").replace(/[\\/:*?"<>|\s]/g, "");
-  return `한장의마음_${state.orderer || "주문자"}_${r}.pdf`;
+  // 파일명: 작성날짜_주문자명 (예: 2026-06-19_김민혜.pdf)
+  const date = (state.date || todayISO());
+  const orderer = (state.orderer || "주문자").replace(/[\\/:*?"<>|\s]/g, "");
+  return `${date}_${orderer}.pdf`;
 }
 
 /* ----------------------------------------------------------
