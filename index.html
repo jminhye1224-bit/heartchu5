@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>한 장의 마음 · 핱츄 편지 서비스</title>
+<meta name="description" content="한 장의 편지에 마음을 담아, 핱츄와 함께 소중한 사람에게 전해보세요." />
+
+<!-- UI 폰트: Pretendard -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<!-- 편지 출력용 손글씨 폰트 (Google Fonts) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Gamja+Flower&family=Single+Day&family=Gaegu:wght@400;700&display=swap" rel="stylesheet" />
+
+<style>
+/* ===========================================================
+   한 장의 마음 · 핱츄 편지 서비스
+   브랜드: 메인 컬러 1개(따뜻한 주황) + 화이트/크림 배경
+   =========================================================== */
+:root {
+  --orange:      #ED7A2E;
+  --orange-dark: #D2641B;
+  --orange-soft: #FBE7D6;
+  --orange-tint: #FFF4EB;
+  --cream:       #FBF6EF;
+  --white:       #FFFFFF;
+  --ink:         #2E2A26;
+  --ink-soft:    #6B635B;
+  --ink-faint:   #A89F95;
+  --line:        #ECE4D9;
+  --danger:      #C9483B;
+  --radius:      16px;
+  --radius-sm:   10px;
+  --shadow:      0 4px 18px rgba(120, 80, 40, 0.08);
+  --font-ui: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-ui);
+  color: var(--ink);
+  background: var(--cream);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 손글씨 폰트 매핑 */
+.font-adult { font-family: "Nanum Pen Script", cursive; }
+.font-cute  { font-family: "Gamja Flower", cursive; }
+.font-clean { font-family: "Single Day", cursive; }
+.font-child { font-family: "Gaegu", cursive; }
+
+.app { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+.screen { min-height: 100vh; display: flex; flex-direction: column; }
+[hidden] { display: none !important; }
+
+/* ---------- 버튼 ---------- */
+.btn {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px 22px;
+  cursor: pointer;
+  transition: background-color .18s ease, transform .12s ease, box-shadow .18s ease, color .18s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn--primary { background: var(--orange); color: #fff; }
+.btn--primary:hover { background: var(--orange-dark); }
+.btn--ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); }
+.btn--ghost:hover { border-color: var(--orange); color: var(--orange-dark); }
+.btn--soft { background: var(--orange-tint); color: var(--orange-dark); border: 1px solid var(--orange-soft); }
+.btn--soft:hover { background: var(--orange-soft); }
+.btn--lg { padding: 16px 38px; font-size: 17px; border-radius: 14px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ---------- 메인 화면 ---------- */
+.home { margin: auto; text-align: center; padding: 60px 0; }
+.home__emoji { font-size: 44px; margin: 0 0 8px; }
+.home__title { font-size: 38px; font-weight: 800; letter-spacing: -1px; margin: 0; }
+.home__subtitle { color: var(--orange-dark); font-weight: 600; margin: 6px 0 28px; letter-spacing: 1px; }
+.home__desc { font-size: 17px; color: var(--ink); margin: 0 0 26px; }
+.home__note { font-size: 14px; color: var(--ink-soft); background: var(--white); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 16px 20px; display: inline-block; margin-bottom: 36px; }
+
+/* ---------- 흐름 헤더 / 스텝 인디케이터 ---------- */
+.flow__header { padding: 22px 0 8px; }
+.flow__brand { font-weight: 700; color: var(--orange-dark); margin-bottom: 16px; }
+.steps { list-style: none; display: flex; gap: 6px; padding: 0; margin: 0;
+  overflow-x: auto; scrollbar-width: none; }
+.steps::-webkit-scrollbar { display: none; }
+.steps li { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-faint);
+  white-space: nowrap; flex: 0 0 auto; }
+.steps li span { width: 22px; height: 22px; border-radius: 50%; background: var(--line); color: #fff;
+  display: grid; place-items: center; font-weight: 700; font-size: 11px; transition: background-color .2s; }
+.steps li.is-active { color: var(--ink); font-weight: 700; }
+.steps li.is-active span,
+.steps li.is-done span { background: var(--orange); }
+
+/* ---------- 흐름 본문 ---------- */
+.flow__body { flex: 1; padding: 26px 0 110px; }
+.step__title { font-size: 24px; font-weight: 800; margin: 0 0 6px; letter-spacing: -.5px; }
+.step__guide { color: var(--ink-soft); font-size: 14px; margin: 0 0 22px; }
+
+/* ---------- 필드 ---------- */
+.field { display: block; margin-bottom: 22px; }
+.field__label { display: flex; align-items: center; justify-content: space-between;
+  font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+.field__label em { color: var(--orange-dark); font-style: normal; }
+.field__hint { display: block; font-size: 12.5px; color: var(--ink-faint); margin-top: 6px; }
+.field__error { display: block; font-size: 12.5px; color: var(--danger); margin-top: 6px; min-height: 1px; }
+.counter { font-size: 12.5px; color: var(--ink-faint); font-weight: 500; }
+.counter.is-ok { color: var(--orange-dark); }
+
+.input, .textarea {
+  width: 100%; font-family: var(--font-ui); font-size: 15px; color: var(--ink);
+  background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 13px 14px; transition: border-color .16s, box-shadow .16s;
+}
+.input--sm { margin-top: 8px; }
+.input:focus, .textarea:focus { outline: none; border-color: var(--orange);
+  box-shadow: 0 0 0 3px var(--orange-soft); }
+.textarea { resize: vertical; min-height: 170px; line-height: 1.7; }
+.textarea--sm { min-height: 80px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* ---------- 칩(예시/날씨) ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px; }
+.chips--soft { margin: 4px 0 10px; }
+.chip { font-family: var(--font-ui); font-size: 13px; color: var(--ink-soft);
+  background: var(--white); border: 1px solid var(--line); border-radius: 999px;
+  padding: 7px 13px; cursor: pointer; transition: all .15s; }
+.chip:hover { border-color: var(--orange); color: var(--orange-dark); }
+.chip.is-active { background: var(--orange); border-color: var(--orange); color: #fff; }
+
+/* ---------- AI / 맞춤법 보조 ---------- */
+.assist { background: var(--orange-tint); border: 1px solid var(--orange-soft);
+  border-radius: var(--radius); margin-bottom: 22px; }
+.assist__summary { cursor: pointer; list-style: none; padding: 14px 18px; font-weight: 700;
+  color: var(--orange-dark); }
+.assist__summary::-webkit-details-marker { display: none; }
+.assist__body { padding: 0 18px 18px; }
+.assist__title { font-size: 16px; margin: 6px 0; }
+.assist__desc { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 12px; }
+.assist__principle { font-size: 12px; color: var(--ink-faint); margin: 12px 0 0; line-height: 1.6; }
+.assist__status { font-size: 13.5px; margin-top: 12px; padding: 12px 14px; border-radius: var(--radius-sm);
+  background: var(--white); border: 1px dashed var(--orange-soft); color: var(--ink-soft); white-space: pre-wrap; }
+.assist--inline { background: transparent; border: none; padding: 0; display: flex; flex-direction: column;
+  gap: 10px; margin: -8px 0 22px; }
+.assist--inline .assist__status { border-style: solid; border-color: var(--line); }
+
+/* ---------- STEP3 디자인 선택 ---------- */
+.designs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.design { padding: 0; border: 2px solid var(--line); background: var(--white); border-radius: var(--radius);
+  overflow: hidden; cursor: pointer; transition: border-color .18s, transform .18s, box-shadow .18s; }
+.design:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.design img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; }
+.design__name { display: block; padding: 10px 6px; font-size: 13.5px; font-weight: 600; }
+.design.is-active { border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-soft); }
+.design.is-active .design__name { color: var(--orange-dark); }
+
+/* ---------- STEP4 글씨체 ---------- */
+.fonts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.font-card { display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+  background: var(--white); border: 2px solid var(--line); border-radius: var(--radius);
+  padding: 18px 20px; cursor: pointer; transition: border-color .18s, box-shadow .18s; }
+.font-card:hover { border-color: var(--orange-soft); }
+.font-card.is-active { border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-soft); }
+.font-card__label { font-size: 14px; font-weight: 700; color: var(--ink-soft); }
+.font-card__sample { font-size: 30px; line-height: 1.2; color: var(--ink); }
+
+/* ---------- STEP5 글씨 크기 ---------- */
+.sizes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.size-card { display: flex; align-items: center; gap: 14px; background: var(--white);
+  border: 2px solid var(--line); border-radius: var(--radius); padding: 16px 20px;
+  cursor: pointer; font-size: 15px; font-weight: 600; color: var(--ink-soft); transition: border-color .18s, box-shadow .18s; }
+.size-card:hover { border-color: var(--orange-soft); }
+.size-card.is-active { border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-soft); color: var(--ink); }
+.size-card__dot { font-family: "Nanum Pen Script", cursive; color: var(--orange-dark); width: 40px; text-align: center; }
+.size-card__dot.s1 { font-size: 20px; }
+.size-card__dot.s2 { font-size: 28px; }
+.size-card__dot.s3 { font-size: 36px; }
+.size-card__dot.s4 { font-size: 46px; }
+
+/* ---------- STEP6 미리보기 ---------- */
+.preview-wrap { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+/* 화면 표시용 프레임 (실제 포스트카드는 내부에서 1063px로 렌더 후 축소) */
+.postcard-frame { width: 340px; height: 340px; overflow: hidden; border-radius: 12px;
+  box-shadow: var(--shadow); background: #fff; }
+.postcard { width: 1063px; height: 1063px; transform: scale(0.319905); transform-origin: top left;
+  background: #FFFDF9; }
+.postcard__inner { width: 100%; height: 100%; padding: 90px 95px; display: flex; flex-direction: column;
+  color: #2b2b2b; }
+.postcard__inner.is-centered { justify-content: center; text-align: center; }
+.postcard__inner.is-centered .postcard__recipient,
+.postcard__inner.is-centered .postcard__sender { text-align: center; }
+.postcard__meta { display: flex; justify-content: space-between; font-size: 30px; color: #8a8178;
+  font-family: "Single Day", cursive; margin-bottom: 40px; }
+.postcard__recipient { font-size: 1.15em; margin-bottom: 26px; }
+.postcard__content { flex: 1; white-space: pre-wrap; word-break: break-word; }
+.postcard__inner.is-centered .postcard__content { flex: 0 0 auto; }
+.postcard__sender { text-align: right; margin-top: 26px; }
+/* 손글씨 본문 기본(어른) - JS가 클래스/사이즈 교체 */
+.postcard__recipient, .postcard__content, .postcard__sender {
+  font-family: "Nanum Pen Script", cursive; font-size: 42px; line-height: 1.65; }
+
+.preview-info { display: grid; grid-template-columns: repeat(3, auto); gap: 10px 26px;
+  background: var(--white); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 22px; margin: 0; }
+.preview-info div { text-align: center; }
+.preview-info dt { font-size: 12px; color: var(--ink-faint); margin-bottom: 4px; }
+.preview-info dd { margin: 0; font-size: 14px; font-weight: 600; }
+
+/* ---------- 하단 내비게이션 ---------- */
+.flow__nav { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(251,246,239,.92);
+  backdrop-filter: blur(8px); border-top: 1px solid var(--line); padding: 14px 20px;
+  display: flex; gap: 12px; justify-content: center; }
+.flow__nav .btn { flex: 1; max-width: 240px; }
+
+/* ---------- 완료 화면 ---------- */
+.done { margin: auto; text-align: center; padding: 60px 0; }
+.done__emoji { font-size: 52px; margin: 0 0 14px; }
+.done__title { font-size: 26px; font-weight: 800; letter-spacing: -.5px; margin: 0 0 18px; }
+.done__desc { font-size: 16px; color: var(--ink-soft); margin: 0 0 36px; }
+
+/* ---------- 오버레이 / 스피너 ---------- */
+.overlay { position: fixed; inset: 0; background: rgba(46,42,38,.45); display: grid; place-items: center; z-index: 50; }
+.overlay__box { background: #fff; border-radius: var(--radius); padding: 32px 40px; text-align: center; }
+.spinner { width: 38px; height: 38px; border: 4px solid var(--orange-soft); border-top-color: var(--orange);
+  border-radius: 50%; margin: 0 auto 16px; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- 반응형 ---------- */
+@media (max-width: 560px) {
+  .home__title { font-size: 32px; }
+  .designs { grid-template-columns: 1fr 1fr; }
+  .fonts, .sizes { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .preview-info { grid-template-columns: 1fr; gap: 12px; }
+  .preview-info div { display: flex; justify-content: space-between; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ 메인 화면 ============ -->
+  <section class="screen" id="screen-home" data-screen="home">
+    <div class="home">
+      <p class="home__emoji">💌</p>
+      <h1 class="home__title">한 장의 마음</h1>
+      <p class="home__subtitle">핱츄 편지 서비스</p>
+      <p class="home__desc">
+        짧은 한마디도 누군가에겐 오래 남는 선물이 됩니다.<br />
+        한 장의 편지에 마음을 담아,<br />
+        핱츄와 함께 소중한 사람에게 전해보세요.
+      </p>
+      <p class="home__note">
+        작성해주신 편지는 엽서 뒷면에 인쇄되어<br />
+        핱츄와 함께 전달됩니다.
+      </p>
+      <button class="btn btn--primary btn--lg" id="btn-start">편지 작성하기</button>
+    </div>
+  </section>
+
+  <!-- ============ 편지 작성 흐름 (STEP 1~6) ============ -->
+  <section class="screen" id="screen-flow" data-screen="flow" hidden>
+
+    <header class="flow__header">
+      <div class="flow__brand">💌 한 장의 마음</div>
+      <ol class="steps" id="steps">
+        <li data-step="1"><span>1</span>주문자</li>
+        <li data-step="2"><span>2</span>편지</li>
+        <li data-step="3"><span>3</span>디자인</li>
+        <li data-step="4"><span>4</span>글씨체</li>
+        <li data-step="5"><span>5</span>크기</li>
+        <li data-step="6"><span>6</span>미리보기</li>
+      </ol>
+    </header>
+
+    <div class="flow__body">
+
+      <!-- ---- STEP 1 : 주문자 정보 ---- -->
+      <div class="step" data-step="1">
+        <h2 class="step__title">주문자 정보</h2>
+        <p class="step__guide">주문 시 사용한 이름을 입력해주세요.</p>
+        <label class="field">
+          <span class="field__label">주문자명 <em>*</em></span>
+          <input type="text" id="f-orderer" class="input" placeholder="예) 김민혜" autocomplete="name" />
+          <span class="field__error" data-error="orderer"></span>
+        </label>
+      </div>
+
+      <!-- ---- STEP 2 : 편지 작성 ---- -->
+      <div class="step" data-step="2" hidden>
+        <h2 class="step__title">편지 작성</h2>
+
+        <div class="grid-2">
+          <label class="field">
+            <span class="field__label">날짜</span>
+            <input type="date" id="f-date" class="input" />
+          </label>
+
+          <label class="field">
+            <span class="field__label">날씨</span>
+            <div class="chips" id="weather-chips">
+              <button type="button" class="chip" data-weather="맑음">맑음</button>
+              <button type="button" class="chip" data-weather="흐림">흐림</button>
+              <button type="button" class="chip" data-weather="구름">구름</button>
+              <button type="button" class="chip" data-weather="비">비</button>
+              <button type="button" class="chip" data-weather="눈">눈</button>
+            </div>
+            <input type="text" id="f-weather" class="input input--sm" placeholder="직접 입력도 가능해요" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field__label">받는 사람</span>
+          <div class="chips" data-fill="f-recipient">
+            <button type="button" class="chip" data-value="엄마에게">엄마에게</button>
+            <button type="button" class="chip" data-value="아빠에게">아빠에게</button>
+            <button type="button" class="chip" data-value="사랑하는 친구에게">사랑하는 친구에게</button>
+            <button type="button" class="chip" data-value="고마운 선생님께">고마운 선생님께</button>
+            <button type="button" class="chip" data-value="소중한 동료에게">소중한 동료에게</button>
+          </div>
+          <input type="text" id="f-recipient" class="input" placeholder="예) 사랑하는 엄마에게" />
+        </label>
+
+        <!-- AI 편지 도움 -->
+        <details class="assist" id="ai-assist">
+          <summary class="assist__summary">✦ AI 편지 도움받기</summary>
+          <div class="assist__body">
+            <h3 class="assist__title">어떤 분께, 어떤 마음을 전하고 싶으신가요?</h3>
+            <p class="assist__desc">
+              전하고 싶은 이야기나 상황을 편하게 적어주세요.
+              AI가 편지 초안 작성을 도와드릴게요.
+            </p>
+            <div class="chips chips--soft">
+              <button type="button" class="chip" data-fill-target="ai-input" data-value="시험을 앞둔 친구를 응원하고 싶어요.">시험을 앞둔 친구 응원</button>
+              <button type="button" class="chip" data-fill-target="ai-input" data-value="결혼하는 언니에게 축하의 마음을 전하고 싶어요.">언니 결혼 축하</button>
+              <button type="button" class="chip" data-fill-target="ai-input" data-value="부모님께 감사한 마음을 전하고 싶어요.">부모님께 감사</button>
+            </div>
+            <textarea id="ai-input" class="textarea textarea--sm" placeholder="예) 시험을 앞둔 친구를 응원하고 싶어요."></textarea>
+            <button type="button" class="btn btn--soft" id="btn-ai">편지 도움받기</button>
+            <p class="assist__principle">
+              AI는 편지를 대신 써드리는 것이 아니라,
+              당신의 마음을 표현할 수 있도록 초안을 제안해드려요.
+            </p>
+            <div class="assist__status" id="ai-status" hidden></div>
+          </div>
+        </details>
+
+        <label class="field">
+          <span class="field__label">
+            편지 내용
+            <span class="counter" id="content-counter">0자</span>
+          </span>
+          <textarea id="f-content" class="textarea" maxlength="500"
+            placeholder="소중한 마음을 천천히 적어주세요."></textarea>
+          <span class="field__hint">
+            소중한 마음이 충분히 전달될 수 있도록 50자 이상 작성해주세요. (50~500자)
+          </span>
+          <span class="field__error" data-error="content"></span>
+        </label>
+
+        <!-- 맞춤법 검사 -->
+        <div class="assist assist--inline">
+          <button type="button" class="btn btn--soft" id="btn-spell">맞춤법 검사하기</button>
+          <div class="assist__status" id="spell-status" hidden></div>
+          <button type="button" class="btn btn--soft" id="btn-spell-apply" hidden>수정본 적용하기</button>
+        </div>
+
+        <label class="field">
+          <span class="field__label">보내는 사람</span>
+          <div class="chips" data-fill="f-sender">
+            <button type="button" class="chip" data-value="민수 드림">민수 드림</button>
+            <button type="button" class="chip" data-value="딸이">딸이</button>
+            <button type="button" class="chip" data-value="아들이">아들이</button>
+            <button type="button" class="chip" data-value="사랑을 담아">사랑을 담아</button>
+            <button type="button" class="chip" data-value="감사한 마음을 담아">감사한 마음을 담아</button>
+          </div>
+          <input type="text" id="f-sender" class="input" placeholder="예) 민혜 드림" />
+        </label>
+      </div>
+
+      <!-- ---- STEP 3 : 엽서 디자인 선택 ---- -->
+      <div class="step" data-step="3" hidden>
+        <h2 class="step__title">엽서 디자인 선택</h2>
+        <p class="step__guide">마음에 드는 엽서 디자인을 골라주세요. (앞면 디자인만 선택해요)</p>
+        <div class="designs" id="designs">
+          <button type="button" class="design" data-design="노을의 마음" data-img="01-sunset.png">
+            <img src="01-sunset.png" alt="노을의 마음" loading="lazy" />
+            <span class="design__name">노을의 마음</span>
+          </button>
+          <button type="button" class="design" data-design="꽃다발의 마음" data-img="02-flower.png">
+            <img src="02-flower.png" alt="꽃다발의 마음" loading="lazy" />
+            <span class="design__name">꽃다발의 마음</span>
+          </button>
+          <button type="button" class="design" data-design="달콤한 응원" data-img="03-candy.png">
+            <img src="03-candy.png" alt="달콤한 응원" loading="lazy" />
+            <span class="design__name">달콤한 응원</span>
+          </button>
+          <button type="button" class="design" data-design="봄날의 편지" data-img="04-field.png">
+            <img src="04-field.png" alt="봄날의 편지" loading="lazy" />
+            <span class="design__name">봄날의 편지</span>
+          </button>
+          <button type="button" class="design" data-design="복을 전하는 마음" data-img="05-luckybag.png">
+            <img src="05-luckybag.png" alt="복을 전하는 마음" loading="lazy" />
+            <span class="design__name">복을 전하는 마음</span>
+          </button>
+        </div>
+        <span class="field__error" data-error="design"></span>
+      </div>
+
+      <!-- ---- STEP 4 : 글씨체 선택 ---- -->
+      <div class="step" data-step="4" hidden>
+        <h2 class="step__title">글씨체 선택</h2>
+        <p class="step__guide">편지에 어울리는 손글씨를 골라주세요.</p>
+        <div class="fonts" id="fonts">
+          <button type="button" class="font-card" data-font="adult">
+            <span class="font-card__label">어른 글씨</span>
+            <span class="font-card__sample font-adult">소중한 마음을 담아</span>
+          </button>
+          <button type="button" class="font-card" data-font="cute">
+            <span class="font-card__label">귀여운 글씨</span>
+            <span class="font-card__sample font-cute">소중한 마음을 담아</span>
+          </button>
+          <button type="button" class="font-card" data-font="clean">
+            <span class="font-card__label">깔끔한 글씨</span>
+            <span class="font-card__sample font-clean">소중한 마음을 담아</span>
+          </button>
+          <button type="button" class="font-card" data-font="child">
+            <span class="font-card__label">아이 글씨</span>
+            <span class="font-card__sample font-child">소중한 마음을 담아</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ---- STEP 5 : 글씨 크기 선택 ---- -->
+      <div class="step" data-step="5" hidden>
+        <h2 class="step__title">글씨 크기 선택</h2>
+        <p class="step__guide">편지에 인쇄될 글씨 크기를 골라주세요.</p>
+        <div class="sizes" id="sizes">
+          <button type="button" class="size-card" data-size="small"><span class="size-card__dot s1">가</span>작게</button>
+          <button type="button" class="size-card" data-size="normal"><span class="size-card__dot s2">가</span>보통</button>
+          <button type="button" class="size-card" data-size="large"><span class="size-card__dot s3">가</span>크게</button>
+          <button type="button" class="size-card" data-size="xlarge"><span class="size-card__dot s4">가</span>아주 크게</button>
+        </div>
+      </div>
+
+      <!-- ---- STEP 6 : 최종 미리보기 ---- -->
+      <div class="step" data-step="6" hidden>
+        <h2 class="step__title">최종 미리보기</h2>
+        <p class="step__guide">엽서 뒷면에 인쇄될 모습이에요. (90mm × 90mm 정사각형)</p>
+
+        <div class="preview-wrap">
+          <div class="postcard-frame" id="postcard-frame">
+            <!-- 실제 인쇄 해상도(1063px=90mm@300dpi)로 렌더되고, 화면에서는 축소 표시됩니다. -->
+            <div class="postcard" id="postcard">
+              <div class="postcard__inner" id="postcard-inner">
+                <div class="postcard__meta">
+                  <span id="pc-date"></span>
+                  <span id="pc-weather"></span>
+                </div>
+                <div class="postcard__recipient" id="pc-recipient"></div>
+                <div class="postcard__content" id="pc-content"></div>
+                <div class="postcard__sender" id="pc-sender"></div>
+              </div>
+            </div>
+          </div>
+
+          <dl class="preview-info">
+            <div><dt>글씨체</dt><dd id="pc-info-font"></dd></div>
+            <div><dt>글씨 크기</dt><dd id="pc-info-size"></dd></div>
+            <div><dt>선택 디자인</dt><dd id="pc-info-design"></dd></div>
+          </dl>
+        </div>
+      </div>
+
+    </div><!-- /flow__body -->
+
+    <footer class="flow__nav">
+      <button class="btn btn--ghost" id="btn-prev">이전</button>
+      <button class="btn btn--primary" id="btn-next">다음</button>
+      <button class="btn btn--primary" id="btn-submit" hidden>제출하기</button>
+    </footer>
+  </section>
+
+  <!-- ============ 제출 완료 화면 ============ -->
+  <section class="screen" id="screen-done" data-screen="done" hidden>
+    <div class="done">
+      <p class="done__emoji">💌</p>
+      <h1 class="done__title">편지가 정상적으로 접수되었습니다.</h1>
+      <p class="done__desc">
+        소중한 마음을 핱츄에 담아주셔서 감사합니다.<br /><br />
+        여러분의 따뜻한 마음이 잘 전달될 수 있도록<br />
+        정성껏 준비해 보내드리겠습니다.
+      </p>
+      <button class="btn btn--primary btn--lg" id="btn-home">홈으로 돌아가기</button>
+    </div>
+  </section>
+
+</div>
+
+<!-- 제출 진행 오버레이 -->
+<div class="overlay" id="overlay" hidden>
+  <div class="overlay__box">
+    <div class="spinner"></div>
+    <p id="overlay-text">편지를 PDF로 만들고 있어요…</p>
+  </div>
+</div>
+
+<!-- 라이브러리: PDF 생성 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* ===========================================================
+   한 장의 마음 · 핱츄 편지 서비스 - 프론트엔드 로직
+   =========================================================== */
+
+/* ----------------------------------------------------------
+   설정 (CONFIG)
+   - APPS_SCRIPT_URL : Google Apps Script 웹앱 배포 URL 을 넣어주세요.
+     (Code.gs 참고. 비어 있으면 제출 시 데모 모드로 동작)
+   - AI_ENDPOINT / SPELLCHECK_ENDPOINT : 추후 Claude/OpenAI API
+     연동 시 사용할 엔드포인트. 비어 있으면 "준비 중" 안내만 표시.
+   ---------------------------------------------------------- */
+const CONFIG = {
+  APPS_SCRIPT_URL: "",       // 예) https://script.google.com/macros/s/XXXX/exec
+  AI_ENDPOINT: "",           // 예) https://script.google.com/macros/s/XXXX/exec?action=ai
+  SPELLCHECK_ENDPOINT: "",   // 예) https://script.google.com/macros/s/XXXX/exec?action=spell
+};
+
+const MIN_CONTENT = 50;
+const MAX_CONTENT = 500;
+const STORAGE_KEY = "hatchu-letter-draft-v1";
+
+/* 손글씨 폰트 라벨/CSS 매핑 */
+const FONT_MAP = {
+  adult: { label: "어른 글씨", css: "font-adult", family: '"Nanum Pen Script", cursive' },
+  cute:  { label: "귀여운 글씨", css: "font-cute",  family: '"Gamja Flower", cursive' },
+  clean: { label: "깔끔한 글씨", css: "font-clean", family: '"Single Day", cursive' },
+  child: { label: "아이 글씨",  css: "font-child", family: '"Gaegu", cursive' },
+};
+/* 글씨 크기(px, 1063px=90mm@300dpi 기준) */
+const SIZE_MAP = {
+  small:  { label: "작게",     px: 34 },
+  normal: { label: "보통",     px: 42 },
+  large:  { label: "크게",     px: 54 },
+  xlarge: { label: "아주 크게", px: 66 },
+};
+
+/* ----------------------------------------------------------
+   상태(state)
+   ---------------------------------------------------------- */
+const state = {
+  step: 1,
+  orderer: "",
+  date: "",
+  weather: "",
+  recipient: "",
+  content: "",
+  sender: "",
+  design: "",      // 디자인명
+  designImg: "",
+  font: "adult",
+  size: "normal",
+};
+
+const $  = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+/* ----------------------------------------------------------
+   초기화
+   ---------------------------------------------------------- */
+document.addEventListener("DOMContentLoaded", () => {
+  restoreDraft();
+  bindHome();
+  bindFlow();
+  bindStep2();
+  bindStep3();
+  bindStep4();
+  bindStep5();
+  bindAssist();
+  bindDone();
+});
+
+/* ---------- 화면 전환 ---------- */
+function showScreen(name) {
+  $$(".screen").forEach((s) => (s.hidden = s.dataset.screen !== name));
+  window.scrollTo(0, 0);
+}
+
+function bindHome() {
+  $("#btn-start").addEventListener("click", () => {
+    showScreen("flow");
+    goStep(state.step || 1);
+  });
+}
+
+/* ----------------------------------------------------------
+   스텝 내비게이션
+   ---------------------------------------------------------- */
+function bindFlow() {
+  $("#btn-next").addEventListener("click", () => {
+    if (!validateStep(state.step)) return;
+    if (state.step < 6) goStep(state.step + 1);
+  });
+  $("#btn-prev").addEventListener("click", () => {
+    if (state.step > 1) goStep(state.step - 1);
+    else showScreen("home");
+  });
+  $("#btn-submit").addEventListener("click", submit);
+}
+
+function goStep(n) {
+  state.step = n;
+  saveDraft();
+
+  $$(".step").forEach((el) => (el.hidden = Number(el.dataset.step) !== n));
+
+  // 스텝 인디케이터
+  $$("#steps li").forEach((li) => {
+    const s = Number(li.dataset.step);
+    li.classList.toggle("is-active", s === n);
+    li.classList.toggle("is-done", s < n);
+  });
+
+  // 내비 버튼
+  $("#btn-prev").textContent = n === 1 ? "처음으로" : "이전";
+  $("#btn-next").hidden = n === 6;
+  $("#btn-submit").hidden = n !== 6;
+
+  if (n === 6) renderPreview();
+  window.scrollTo(0, 0);
+}
+
+/* ----------------------------------------------------------
+   유효성 검사
+   ---------------------------------------------------------- */
+function setError(key, msg) {
+  const el = $(`[data-error="${key}"]`);
+  if (el) el.textContent = msg || "";
+}
+
+function validateStep(n) {
+  if (n === 1) {
+    if (!state.orderer.trim()) {
+      setError("orderer", "주문자명을 입력해주세요.");
+      $("#f-orderer").focus();
+      return false;
+    }
+    setError("orderer", "");
+  }
+  if (n === 2) {
+    const len = state.content.trim().length;
+    if (len < MIN_CONTENT) {
+      setError("content", `편지 내용을 ${MIN_CONTENT}자 이상 작성해주세요. (현재 ${len}자)`);
+      $("#f-content").focus();
+      return false;
+    }
+    setError("content", "");
+  }
+  if (n === 3) {
+    if (!state.design) {
+      setError("design", "엽서 디자인을 선택해주세요.");
+      return false;
+    }
+    setError("design", "");
+  }
+  return true;
+}
+
+/* ----------------------------------------------------------
+   STEP 1 입력
+   ---------------------------------------------------------- */
+$ && document.addEventListener("input", (e) => {
+  if (e.target.id === "f-orderer") { state.orderer = e.target.value; saveDraft(); }
+});
+
+/* ----------------------------------------------------------
+   STEP 2 : 편지 작성
+   ---------------------------------------------------------- */
+function bindStep2() {
+  // 날짜 기본값 = 오늘
+  const dateEl = $("#f-date");
+  if (!state.date) state.date = todayISO();
+  dateEl.value = state.date;
+  dateEl.addEventListener("change", () => { state.date = dateEl.value; saveDraft(); });
+
+  // 날씨 칩
+  $$("#weather-chips .chip").forEach((c) => {
+    c.addEventListener("click", () => {
+      const v = c.dataset.weather;
+      state.weather = v;
+      $("#f-weather").value = v;
+      markWeatherChip();
+      saveDraft();
+    });
+  });
+  const weatherEl = $("#f-weather");
+  weatherEl.value = state.weather;
+  weatherEl.addEventListener("input", () => {
+    state.weather = weatherEl.value;
+    markWeatherChip();
+    saveDraft();
+  });
+
+  // 받는/보내는 사람 예시 칩 (data-fill)
+  $$('.chips[data-fill]').forEach((group) => {
+    const targetId = group.dataset.fill;
+    group.querySelectorAll(".chip").forEach((c) => {
+      c.addEventListener("click", () => {
+        $(`#${targetId}`).value = c.dataset.value;
+        $(`#${targetId}`).dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    });
+  });
+
+  bindText("#f-recipient", "recipient");
+  bindText("#f-sender", "sender");
+
+  // 편지 내용 + 글자 수
+  const contentEl = $("#f-content");
+  contentEl.value = state.content;
+  contentEl.addEventListener("input", () => {
+    state.content = contentEl.value;
+    updateCounter();
+    saveDraft();
+  });
+  updateCounter();
+  markWeatherChip();
+}
+
+function bindText(sel, key) {
+  const el = $(sel);
+  el.value = state[key];
+  el.addEventListener("input", () => { state[key] = el.value; saveDraft(); });
+}
+
+function updateCounter() {
+  const len = state.content.trim().length;
+  const el = $("#content-counter");
+  el.textContent = `${len}자`;
+  el.classList.toggle("is-ok", len >= MIN_CONTENT);
+  if (len >= MIN_CONTENT) setError("content", "");
+}
+
+function markWeatherChip() {
+  $$("#weather-chips .chip").forEach((c) =>
+    c.classList.toggle("is-active", c.dataset.weather === state.weather)
+  );
+}
+
+/* ----------------------------------------------------------
+   STEP 3 : 디자인 선택
+   ---------------------------------------------------------- */
+function bindStep3() {
+  $$("#designs .design").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.design = btn.dataset.design;
+      state.designImg = btn.dataset.img;
+      $$("#designs .design").forEach((b) => b.classList.toggle("is-active", b === btn));
+      setError("design", "");
+      saveDraft();
+    });
+  });
+}
+
+/* ----------------------------------------------------------
+   STEP 4 : 글씨체
+   ---------------------------------------------------------- */
+function bindStep4() {
+  $$("#fonts .font-card").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.font = btn.dataset.font;
+      $$("#fonts .font-card").forEach((b) => b.classList.toggle("is-active", b === btn));
+      saveDraft();
+    });
+  });
+}
+
+/* ----------------------------------------------------------
+   STEP 5 : 글씨 크기
+   ---------------------------------------------------------- */
+function bindStep5() {
+  $$("#sizes .size-card").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.size = btn.dataset.size;
+      $$("#sizes .size-card").forEach((b) => b.classList.toggle("is-active", b === btn));
+      saveDraft();
+    });
+  });
+}
+
+/* ----------------------------------------------------------
+   STEP 6 : 미리보기 렌더 + 자동 정렬
+   ---------------------------------------------------------- */
+function renderPreview() {
+  const inner = $("#postcard-inner");
+  const font = FONT_MAP[state.font];
+  const size = SIZE_MAP[state.size];
+
+  // 텍스트 채우기
+  $("#pc-date").textContent = formatDate(state.date);
+  $("#pc-weather").textContent = state.weather || "";
+  $("#pc-recipient").textContent = state.recipient || "";
+  $("#pc-content").textContent = state.content;
+  $("#pc-sender").textContent = state.sender || "";
+
+  // 손글씨 폰트/크기 적용
+  ["#pc-recipient", "#pc-content", "#pc-sender"].forEach((sel) => {
+    const el = $(sel);
+    el.classList.remove("font-adult", "font-cute", "font-clean", "font-child");
+    el.classList.add(font.css);
+    el.style.fontSize = size.px + "px";
+  });
+  $("#pc-recipient").style.fontSize = Math.round(size.px * 1.05) + "px";
+  $("#pc-sender").style.fontSize = Math.round(size.px * 0.95) + "px";
+
+  // 자동 정렬: 짧은 편지(대략 3줄 이하 추정)는 가로·세로 중앙 정렬
+  inner.classList.toggle("is-centered", isShortLetter(state.content, size.px));
+
+  // 정보 영역
+  $("#pc-info-font").textContent = font.label;
+  $("#pc-info-size").textContent = size.label;
+  $("#pc-info-design").textContent = state.design || "-";
+}
+
+// 줄 수/글자 수 기반으로 짧은 편지 여부 추정
+function isShortLetter(text, px) {
+  const explicitLines = text.split(/\n/).length;
+  // 본문 영역 폭(1063 - 좌우 패딩 190 ≈ 873px) 기준 줄당 글자 수 추정
+  const charsPerLine = Math.max(8, Math.floor(873 / (px * 0.62)));
+  const wrapped = text.split(/\n/).reduce((acc, line) => acc + Math.max(1, Math.ceil(line.length / charsPerLine)), 0);
+  const lines = Math.max(explicitLines, wrapped);
+  return lines <= 3;
+}
+
+/* ----------------------------------------------------------
+   AI 도움 / 맞춤법 검사  (※ 현재는 화면 흐름 + 연동 구조만)
+   ---------------------------------------------------------- */
+function bindAssist() {
+  // 예시 칩 → AI 입력칸 채우기
+  $$('[data-fill-target]').forEach((c) => {
+    c.addEventListener("click", () => {
+      const t = $(`#${c.dataset.fillTarget}`);
+      if (t) t.value = c.dataset.value;
+    });
+  });
+
+  $("#btn-ai").addEventListener("click", requestAiDraft);
+  $("#btn-spell").addEventListener("click", requestSpellcheck);
+  $("#btn-spell-apply").addEventListener("click", applySpellResult);
+}
+
+/* AI 편지 초안 생성
+   TODO: CONFIG.AI_ENDPOINT 연동 시 아래 fetch 활성화.
+   응답 형식 예: { draft: "..." } */
+async function requestAiDraft() {
+  const situation = $("#ai-input").value.trim();
+  const status = $("#ai-status");
+  status.hidden = false;
+
+  if (!situation) {
+    status.textContent = "전하고 싶은 상황이나 마음을 먼저 적어주세요.";
+    return;
+  }
+  if (!CONFIG.AI_ENDPOINT) {
+    status.textContent =
+      "AI 편지 도움 기능은 곧 제공될 예정이에요.\n" +
+      "지금은 적어주신 내용을 참고해 직접 편지를 이어가 보세요. 🙂";
+    return;
+  }
+  try {
+    status.textContent = "AI가 편지 초안을 작성하고 있어요…";
+    const res = await fetch(CONFIG.AI_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ situation, recipient: state.recipient }),
+    });
+    const data = await res.json();
+    if (data && data.draft) {
+      $("#f-content").value = data.draft;
+      $("#f-content").dispatchEvent(new Event("input", { bubbles: true }));
+      status.textContent = "초안을 편지 내용에 넣어드렸어요. 자유롭게 다듬어 주세요. ✨";
+    } else {
+      status.textContent = "초안을 받지 못했어요. 잠시 후 다시 시도해 주세요.";
+    }
+  } catch (err) {
+    status.textContent = "AI 연결에 문제가 있어요. 잠시 후 다시 시도해 주세요.";
+  }
+}
+
+let _spellResult = null;
+/* 맞춤법 검사
+   TODO: CONFIG.SPELLCHECK_ENDPOINT 연동 시 활성화.
+   응답 형식 예: { corrected: "..." } */
+async function requestSpellcheck() {
+  const text = $("#f-content").value.trim();
+  const status = $("#spell-status");
+  status.hidden = false;
+  $("#btn-spell-apply").hidden = true;
+
+  if (!text) {
+    status.textContent = "먼저 편지 내용을 작성해주세요.";
+    return;
+  }
+  if (!CONFIG.SPELLCHECK_ENDPOINT) {
+    status.textContent =
+      "맞춤법·띄어쓰기 검사 기능은 곧 제공될 예정이에요.\n" +
+      "작성한 편지를 한 번 더 천천히 읽어봐 주세요. 🙂";
+    return;
+  }
+  try {
+    status.textContent = "맞춤법을 확인하고 있어요…";
+    const res = await fetch(CONFIG.SPELLCHECK_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    if (data && data.corrected) {
+      _spellResult = data.corrected;
+      status.textContent = "추천 수정본:\n\n" + data.corrected;
+      $("#btn-spell-apply").hidden = false;
+    } else {
+      status.textContent = "수정할 내용을 찾지 못했어요.";
+    }
+  } catch (err) {
+    status.textContent = "맞춤법 검사 연결에 문제가 있어요. 잠시 후 다시 시도해 주세요.";
+  }
+}
+
+function applySpellResult() {
+  if (!_spellResult) return;
+  $("#f-content").value = _spellResult;
+  $("#f-content").dispatchEvent(new Event("input", { bubbles: true }));
+  $("#spell-status").textContent = "수정본을 적용했어요. ✨";
+  $("#btn-spell-apply").hidden = true;
+}
+
+/* ----------------------------------------------------------
+   제출 : PDF 생성 → Apps Script 전송
+   ---------------------------------------------------------- */
+async function submit() {
+  // 안전망 검사
+  for (const n of [1, 2, 3]) {
+    if (!validateStep(n)) { goStep(n); return; }
+  }
+
+  const overlay = $("#overlay");
+  const overlayText = $("#overlay-text");
+  overlay.hidden = false;
+
+  try {
+    overlayText.textContent = "편지를 PDF로 만들고 있어요…";
+    const pdfBase64 = await generatePdfBase64();
+
+    const payload = {
+      submittedAt: new Date().toISOString(),
+      orderer: state.orderer.trim(),
+      design: state.design,
+      recipient: state.recipient.trim(),
+      sender: state.sender.trim(),
+      date: state.date,
+      weather: state.weather.trim(),
+      content: state.content.trim(),
+      font: FONT_MAP[state.font].label,
+      size: SIZE_MAP[state.size].label,
+      fileName: makeFileName(),
+      pdfBase64, // data URI 제외한 순수 base64
+    };
+
+    overlayText.textContent = "편지를 접수하고 있어요…";
+
+    if (CONFIG.APPS_SCRIPT_URL) {
+      // Apps Script 웹앱은 CORS 프리플라이트를 처리하지 못하므로
+      // text/plain + no-cors 로 전송한다. (서버에는 정상 도달)
+      await fetch(CONFIG.APPS_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+      });
+    } else {
+      // 데모 모드: 서버 미설정 시 PDF를 로컬에 내려받아 결과 확인
+      downloadPdf(pdfBase64, payload.fileName);
+      console.warn("[데모 모드] CONFIG.APPS_SCRIPT_URL 이 비어 있어 PDF를 로컬에 저장했습니다.");
+    }
+
+    clearDraft();
+    overlay.hidden = true;
+    showScreen("done");
+  } catch (err) {
+    console.error(err);
+    overlay.hidden = true;
+    alert("제출 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.");
+  }
+}
+
+/* postcard 요소를 1063px 원본 크기로 캡처 → 90×90mm PDF base64 반환 */
+async function generatePdfBase64() {
+  const postcard = $("#postcard");
+
+  // 손글씨 웹폰트 로딩 보장
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch (e) {}
+  }
+
+  // 캡처 동안 화면 축소(transform) 해제
+  const prevTransform = postcard.style.transform;
+  postcard.style.transform = "none";
+
+  const canvas = await html2canvas(postcard, {
+    width: 1063,
+    height: 1063,
+    scale: 1,
+    backgroundColor: "#FFFDF9",
+    useCORS: true,
+  });
+
+  postcard.style.transform = prevTransform;
+
+  const imgData = canvas.toDataURL("image/png");
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: "mm", format: [90, 90], orientation: "portrait" });
+  pdf.addImage(imgData, "PNG", 0, 0, 90, 90);
+
+  // base64 (data URI 접두어 제거)
+  return pdf.output("datauristring").split(",")[1];
+}
+
+function downloadPdf(base64, fileName) {
+  const link = document.createElement("a");
+  link.href = "data:application/pdf;base64," + base64;
+  link.download = fileName;
+  link.click();
+}
+
+function makeFileName() {
+  const r = (state.recipient || "letter").replace(/[\\/:*?"<>|\s]/g, "");
+  return `한장의마음_${state.orderer || "주문자"}_${r}.pdf`;
+}
+
+/* ----------------------------------------------------------
+   완료 화면
+   ---------------------------------------------------------- */
+function bindDone() {
+  $("#btn-home").addEventListener("click", () => {
+    resetState();
+    showScreen("home");
+  });
+}
+
+/* ----------------------------------------------------------
+   임시저장 (LocalStorage)
+   ---------------------------------------------------------- */
+function saveDraft() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+function restoreDraft() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    Object.assign(state, JSON.parse(raw));
+    // 복원 후 UI 동기화
+    if (state.orderer) $("#f-orderer").value = state.orderer;
+    syncSelectionUI();
+  } catch (e) {}
+}
+function clearDraft() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+}
+function resetState() {
+  clearDraft();
+  Object.assign(state, {
+    step: 1, orderer: "", date: "", weather: "", recipient: "",
+    content: "", sender: "", design: "", designImg: "", font: "adult", size: "normal",
+  });
+  // 입력 필드 비우기
+  ["f-orderer", "f-weather", "f-recipient", "f-content", "f-sender"].forEach((id) => {
+    const el = document.getElementById(id); if (el) el.value = "";
+  });
+  $("#f-date").value = todayISO();
+  state.date = todayISO();
+  updateCounter();
+  syncSelectionUI();
+}
+
+// 복원 시 선택 카드/칩 활성화 동기화
+function syncSelectionUI() {
+  $$("#designs .design").forEach((b) => b.classList.toggle("is-active", b.dataset.design === state.design));
+  $$("#fonts .font-card").forEach((b) => b.classList.toggle("is-active", b.dataset.font === state.font));
+  $$("#sizes .size-card").forEach((b) => b.classList.toggle("is-active", b.dataset.size === state.size));
+}
+
+/* ----------------------------------------------------------
+   유틸
+   ---------------------------------------------------------- */
+function todayISO() {
+  const d = new Date();
+  const off = d.getTimezoneOffset();
+  return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
+}
+function formatDate(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${y}년 ${Number(m)}월 ${Number(d)}일`;
+}
+</script>
+</body>
+</html>
